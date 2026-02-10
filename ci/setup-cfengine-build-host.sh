@@ -50,6 +50,8 @@ function cleanup()
     pkill -9 cf-execd || true
   else
     echo "No pkill available. Maybe some cf procs left over?"
+    # pgrep suggestion is ignored due to wanting POSIX compatability
+    # shellcheck disable=SC2009
     ps -efl | grep cf
   fi
   ls -l /home
@@ -123,6 +125,14 @@ if grep 6.10 /etc/issue; then
   urlget https://cfengine-package-repos.s3.amazonaws.com/enterprise/Enterprise-3.24.3/misc/cfengine-masterfiles-3.24.3-1.pkg.tar.gz
 fi
 
+if grep -u ubuntu /etc/os-release; then
+  if grep -i version=\"16 /etc/os-release; then
+    urlget https://cfengine-package-repos.s3.amazonaws.com/enterprise/Enterprise-3.21.8/agent/agent_ubuntu16_x86_64/cfengine-nova_3.21.8-1.ubuntu16_amd64.deb
+    dpkg -i cfengine-nova_3.21.8-1.ubuntu16_amd64.deb
+    urlget https://cfengine-package-repos.s3.amazonaws.com/enterprise/Enterprise-3.21.8/misc/cfengine-masterfiles-3.21.8-1.pkg.tar.gz
+  fi
+fi
+
 if grep suse /etc/os-release; then
   urlget https://cfengine-package-repos.s3.amazonaws.com/pub/gpg.key
   rpm --import gpg.key
@@ -183,7 +193,7 @@ if ! /var/cfengine/bin/cf-agent -V; then
   else
     _VERSION=""
   fi
-  cf-remote --log-level info $_VERSION install --clients localhost || true
+  cf-remote --log-level info "$_VERSION" install --clients localhost || true
 fi
 
 if [ ! -x /var/cfengine/bin/cf-agent ]; then
