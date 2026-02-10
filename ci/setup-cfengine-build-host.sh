@@ -50,6 +50,8 @@ function cleanup()
     pkill -9 cf-execd || true
   else
     echo "No pkill available. Maybe some cf procs left over?"
+    # pgrep suggestion is ignored due to wanting POSIX compatability
+    # shellcheck disable=SC2009
     ps -efl | grep cf
   fi
   ls -l /home
@@ -183,7 +185,7 @@ if ! /var/cfengine/bin/cf-agent -V; then
   else
     _VERSION=""
   fi
-  cf-remote --log-level info $_VERSION install --clients localhost || true
+  cf-remote --log-level info "$_VERSION" install --clients localhost || true
 fi
 
 if [ ! -x /var/cfengine/bin/cf-agent ]; then
