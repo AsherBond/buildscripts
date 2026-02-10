@@ -125,6 +125,14 @@ if grep 6.10 /etc/issue; then
   urlget https://cfengine-package-repos.s3.amazonaws.com/enterprise/Enterprise-3.24.3/misc/cfengine-masterfiles-3.24.3-1.pkg.tar.gz
 fi
 
+if grep -u ubuntu /etc/os-release; then
+  if grep -i version=\"16 /etc/os-release; then
+    urlget https://cfengine-package-repos.s3.amazonaws.com/enterprise/Enterprise-3.21.8/agent/agent_ubuntu16_x86_64/cfengine-nova_3.21.8-1.ubuntu16_amd64.deb
+    dpkg -i cfengine-nova_3.21.8-1.ubuntu16_amd64.deb
+    urlget https://cfengine-package-repos.s3.amazonaws.com/enterprise/Enterprise-3.21.8/misc/cfengine-masterfiles-3.21.8-1.pkg.tar.gz
+  fi
+fi
+
 if grep suse /etc/os-release; then
   urlget https://cfengine-package-repos.s3.amazonaws.com/pub/gpg.key
   rpm --import gpg.key
