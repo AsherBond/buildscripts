@@ -408,11 +408,11 @@ jenkins_builds ALL=NOPASSWD: /usr/bin/podman
     !have_sys_group.(suse|sles|opensuse)::
       "groupadd -g 3 sys" contain => in_shell;
     !have_daemon_user.(suse|sles|opensuse)::
-      "useradd -u 1 daemon" contain => in_shell;
+      "useradd -u 1 daemon -g daemon" contain => in_shell;
     !have_bin_user.(suse|sles|opensuse)::
-      "useradd -u 2 bin" contain => in_shell;
+      "useradd -u 2 bin -g bin" contain => in_shell;
     !have_sys_user.(suse|sles|opensuse)::
-      "useradd -u 3 sys" contain => in_shell;
+      "useradd -u 3 sys -g sys" contain => in_shell;
 
     linux::
       "sshd -T 2>/dev/null | grep -qiE '^PermitRootLogin no'"
