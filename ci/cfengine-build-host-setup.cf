@@ -253,7 +253,7 @@ bundle agent cfengine_build_host_setup
     (redhat_8|centos_8).!have_fakeroot:: # special fakeroot, missing from _8 an d up?
       "sudo rpm -iv https://kojipkgs.fedoraproject.org//packages/fakeroot/1.23/1.fc29/x86_64/fakeroot-1.23-1.fc29.x86_64.rpm https://kojipkgs.fedoraproject.org//packages/fakeroot/1.23/1.fc29/x86_64/fakeroot-libs-1.23-1.fc29.x86_64.rpm"
         contain => in_shell;
-    (redhat|centos).!(redhat_7|centos_7).!epel_release_ok::
+    (redhat|centos).!(redhat_7|centos_7).!(redhat_6|centos_6).!epel_release_ok::
       "yum install --assumeyes https://dl.fedoraproject.org/pub/epel/epel-release-latest-${sys.os_version_major}.noarch.rpm"
         comment => "rhel-7 installs this with a packages promise. TODO: check a sha for the download URL somehow?",
         classes => results( "bundle", "epel_release" ),
@@ -408,11 +408,11 @@ jenkins_builds ALL=NOPASSWD: /usr/bin/podman
     !have_sys_group.(suse|sles|opensuse)::
       "groupadd -g 3 sys" contain => in_shell;
     !have_daemon_user.(suse|sles|opensuse)::
-      "useradd -u 1 daemon" contain => in_shell;
+      "useradd -u 1 daemon -g daemon" contain => in_shell;
     !have_bin_user.(suse|sles|opensuse)::
-      "useradd -u 2 bin" contain => in_shell;
+      "useradd -u 2 bin -g bin" contain => in_shell;
     !have_sys_user.(suse|sles|opensuse)::
-      "useradd -u 3 sys" contain => in_shell;
+      "useradd -u 3 sys -g sys" contain => in_shell;
 
     linux::
       "sshd -T 2>/dev/null | grep -qiE '^PermitRootLogin no'"
