@@ -19,13 +19,13 @@ from pathlib import Path
 log = logging.getLogger("build-in-container")
 
 IMAGE_REGISTRY = "ghcr.io/cfengine"
+CONFIG_PATH = Path(__file__).resolve().parent / "platforms.json"
 
 
 @functools.cache
 def get_config():
     """Load and cache platform configuration from platforms.json."""
-    config_path = Path(__file__).resolve().parent / "platforms.json"
-    return json.loads(config_path.read_text())
+    return json.loads(CONFIG_PATH.read_text())
 
 
 def detect_source_dir():
@@ -185,8 +185,7 @@ def update_platform_versions(platform_name=None):
             config[name]["image_version"] = latest
             log.info(f"{name}: {old} -> {latest}")
 
-    config_path = Path(__file__).resolve().parent / "platforms.json"
-    config_path.write_text(json.dumps(config, indent=2) + "\n")
+    CONFIG_PATH.write_text(json.dumps(config, indent=2) + "\n")
 
 
 def latest_base_image_digest(base_image):
@@ -239,8 +238,7 @@ def update_base_image_shas(platform_name=None):
             config[name]["base_image_sha"] = latest
             log.info(f"{name}: {base_image} {old} -> {latest}")
 
-    config_path = Path(__file__).resolve().parent / "platforms.json"
-    config_path.write_text(json.dumps(config, indent=2) + "\n")
+    CONFIG_PATH.write_text(json.dumps(config, indent=2) + "\n")
 
 
 def run_container(args, image_tag, source_dir, script_dir):
