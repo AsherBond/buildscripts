@@ -1,0 +1,33 @@
+name: Update base image SHAs
+
+on:
+  schedule:
+    - cron: "0 1 * * 1" # Every Monday at 01:00 UTC
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  update:
+    if: contains(fromJSON('["cfengine","mendersoftware","NorthernTechHQ"]'), github.repository_owner)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Update platforms.json
+        run: ./build-in-container.py --update-sha
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v8
+        with:
+          commit-message: "Updated base image SHAs in platforms.json"
+          branch: update-base-image-shas
+          title: "Updated base image SHAs"
+          body: |
+            Automated update of `base_image_sha` in `platforms.json` to the
+            current manifest digests from Docker Hub.
+          reviewers: |
+            larsewi
+            craigcomstock

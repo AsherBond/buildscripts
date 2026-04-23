@@ -19,13 +19,13 @@ from pathlib import Path
 log = logging.getLogger("build-in-container")
 
 IMAGE_REGISTRY = "ghcr.io/cfengine"
+CONFIG_PATH = Path(__file__).resolve().parent / "platforms.json"
 
 
 @functools.cache
 def get_config():
     """Load and cache platform configuration from platforms.json."""
-    config_path = Path(__file__).resolve().parent / "platforms.json"
-    return json.loads(config_path.read_text())
+    return json.loads(CONFIG_PATH.read_text())
 
 
 def detect_source_dir():
@@ -185,8 +185,60 @@ def update_platform_versions(platform_name=None):
             config[name]["image_version"] = latest
             log.info(f"{name}: {old} -> {latest}")
 
-    config_path = Path(__file__).resolve().parent / "platforms.json"
-    config_path.write_text(json.dumps(config, indent=2) + "\n")
+    CONFIG_PATH.write_text(json.dumps(config, indent=2) + "\n")
+
+
+def latest_base_image_digest(base_image):
+    """Fetch current manifest digest from Docker Hub for a base image."""
+    # Docker Hub's v2 API path requires a namespace. Official images (ubuntu,
+    # debian, ...) live under "library/".
+    repo, tag = base_image.rsplit(":", 1)
+    repo = f"library/{repo}"
+
+    # The v2 API requires a bearer token even for anonymous public pulls.
+    token_url = (
+        "https://auth.docker.io/token"
+        f"?service=registry.docker.io&scope=repository:{repo}:pull"
+    )
+    token = json.loads(urllib.request.urlopen(token_url).read())["token"]
+
+    # Accept only the OCI multi-arch index format: this gives the fat manifest
+    # digest (what `docker pull` pins to) rather than an arch-specific one.
+    # Docker Hub official images are all published as OCI indexes today; if an
+    # image is ever served in the older Docker manifest.list.v2 format instead,
+    # the registry will reject the request with 406.
+    manifest_url = f"https://registry-1.docker.io/v2/{repo}/manifests/{tag}"
+    accept = "application/vnd.oci.image.index.v1+json"
+
+    # HEAD skips the manifest body; the digest comes back in a response header.
+    req = urllib.request.Request(
+        manifest_url,
+        headers={"Authorization": f"Bearer {token}", "Accept": accept},
+        method="HEAD",
+    )
+    with urllib.request.urlopen(req) as resp:
+        return resp.headers.get("Docker-Content-Digest")
+
+
+def update_base_image_shas(platform_name=None):
+    """Update base_image_sha in platforms.json to the latest Docker Hub digest."""
+    config = get_config()
+
+    platforms = [platform_name] if platform_name else list(config.keys())
+    for name in platforms:
+        base_image = config[name]["base_image"]
+        latest = latest_base_image_digest(base_image)
+        if latest is None:
+            log.warning(f"No digest returned for {base_image}, skipping.")
+            continue
+        old = config[name]["base_image_sha"]
+        if old == latest:
+            log.info(f"{name}: {base_image} already at {latest}")
+        else:
+            config[name]["base_image_sha"] = latest
+            log.info(f"{name}: {base_image} {old} -> {latest}")
+
+    CONFIG_PATH.write_text(json.dumps(config, indent=2) + "\n")
 
 
 def run_container(args, image_tag, source_dir, script_dir):
@@ -311,6 +363,12 @@ def parse_args():
         help="Fetch latest image version from registry and update platforms.json",
     )
     parser.add_argument(
+        "--update-sha",
+        dest="update_sha",
+        action="store_true",
+        help="Fetch latest base image digest from Docker Hub and update platforms.json",
+    )
+    parser.add_argument(
         "--shell",
         action="store_true",
         help="Drop into container shell for debugging",
@@ -332,8 +390,8 @@ def parse_args():
             print(f"  {name:15s}  ({config['base_image']})")
         sys.exit(0)
 
-    if args.update:
-        # --platform is optional for --update; updates all if omitted
+    if args.update or args.update_sha:
+        # --platform is optional for these modes; updates all if omitted
         return args
 
     # --platform is always required (except --list-platforms/--update handled above)
@@ -365,6 +423,10 @@ def main():
 
     if args.update:
         update_platform_versions(args.platform)
+        return
+
+    if args.update_sha:
+        update_base_image_shas(args.platform)
         return
 
     # Detect source directory
