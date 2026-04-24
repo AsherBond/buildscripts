@@ -26,8 +26,8 @@ install_jdk() {
 export JAVA_HOME="/opt/jdk-$version"
 export PATH=\$PATH:\$JAVA_HOME/bin
 EOF
-  chown -R root:jenkins "/opt/jdk-$version"
-  chmod -R g+rx "/opt/jdk-$version"
+  chown -R root:root "/opt/jdk-$version"
+  chmod -R 755 "/opt/jdk-$version"
   if command -v update-alternatives; then
     update-alternatives --install /usr/bin/java java "/opt/jdk-$version/bin/java" 9999
   else
